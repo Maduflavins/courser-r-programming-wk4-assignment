@@ -1,0 +1,232 @@
+---
+title: "Coursera R Programming Assignment"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+--load the data---
+```{r}
+data = read.csv("outcomes.csv", colClasses = "character")
+```
+---take a peek at the data---
+
+```{r}
+head(data)
+```
+
+---view interested subsets---
+
+```{r}
+summary(data[, c(2,7,11,17,19,23)])
+```
+---30 day mortality plot---
+```{r}
+data[, 11] <- as.numeric(data[, 11])
+hist(data[, 11], main = "histogram diagram of data[, 11]")
+```
+---
+finding best hospital in a state
+first load the data
+
+---
+
+
+```{r}
+bests <- function(state, outcome){
+  ##Read the data
+  df <- read.csv("outcomes.csv", colClasses = c(Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack = "character", 
+        Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure = "character", 
+        Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia = "character", 
+        Hospital.Name = "character"))
+  
+  suppressWarnings(class(df$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack) <- "numeric")
+  suppressWarnings(class(df$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure) <- "numeric")
+  suppressWarnings(class(df$Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia) <- "numeric")
+  
+  ## validate provided state and outcome
+  outcomes <- c("heart attack", "heart failure", "pneumonia")
+  if(!(state %in%df$State)){
+    stop("invalid state")
+  }
+  if(!(outcome %in% outcomes)){
+    stop("invalid outcomes")
+  }
+  
+  ## Return best hospital names(hospitals with the lowes 30-day death rate)
+  
+  df2 <- df[df$State == state, ] # extracting data for specific state
+  if (outcome == "heart attack") {
+        return(min(df2[df2$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack == min(df2$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack, na.rm = TRUE), 2],             na.rm = TRUE))
+  } else if (outcome == "heart failure") {
+    return(min(df2[df2$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure == min(df2$Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure, 
+                na.rm = TRUE), 2], na.rm = TRUE))
+    } else if (outcome == "pneumonia") {
+        return(min(df2[df2$Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia == min(df2$Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia, 
+                na.rm = T), 2], na.rm = TRUE))
+    }
+}
+
+```
+
+```{r}
+bests("SC", "heart attack")
+```
+```{r}
+bests("NY", "pneumonia")
+```
+## Function to rank hospitals by outcome in a state
+
+```{r}
+rankhospital <- function(state, outcome, num){
+  # Read the file outcome-of-care-measures.csv
+    df <- read.csv("./outcomes.csv", colClasses = c(Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack = "character", 
+        Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure = "character", 
+        Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia = "character", 
+        Hospital.Name = "character"))
+    
+    df[, 11] <- suppressWarnings(as.numeric(df[, 11]))
+    df[, 17] <- suppressWarnings(as.numeric(df[, 17]))
+    df[, 23] <- suppressWarnings(as.numeric(df[, 23]))
+    
+    #validate supplied state and outcome
+    
+    outcomes <- c("heart attack", "heart failure", "pneumonia")
+    
+    if (!(state %in% df$State)) {
+        stop("invalid state")
+    }
+    
+    if (!(outcome %in% outcomes)) {
+        stop("invalid outcome")
+    }
+    
+    
+    if (outcome == "heart attack") {
+        df2 <- df[df$State == state, c(2, 11)]
+        names(df2)[2] <- "Rate"
+    }
+    
+    if (outcome == "heart failure") {
+        df2 <- df[df$State == state, c(2, 17)]
+        names(df2)[2] <- "Rate"
+    }
+    
+    
+    if (outcome == "pneumonia") {
+        df2 <- df[df$State == state, c(2, 23)]
+        names(df2)[2] <- "Rate"
+    }
+    # Remove rows where Ratings are not known.
+    df2 <- df2[!is.na(df2$Rate), ]
+    # Order the dataframe by Names to help in Ranking
+    df2 <- df2[order(df2[1]), ]
+    # head(df1) tail(df1)
+    
+    # Set Rank
+    df2$rank <- rank(df2$Rate, ties.method = "first")
+    
+    # Return the values based on data provided
+    if (num == "best") {
+        return(df2[df2$rank == min(df2$rank), 1])
+    } else if (num == "worst") {
+        return(df2[df2$rank == max(df2$rank), 1])
+    } else if ((num <= max(df2$rank)) | (num >= min(df2$rank))) {
+        return(df2[df2$rank == num, 1])
+    } else if ((num > max(df2$rank)) | (num < min(df2$rank))) {
+        NA
+    }
+}
+```
+```{r}
+rankhospital("NC", "heart attack", "worst")
+
+```
+```{r}
+rankhospital("WA", "heart attack", 7)
+```
+```{r}
+rankhospital("TX", "pneumonia", 10)
+```
+```{r}
+rankhospital("NY", "heart attack", 7)
+```
+## function for ranking all hospital
+
+```{r}
+rankall <- function(outcome, num = "best") {
+    outcomes <- c("heart attack", "heart failure", "pneumonia")
+    
+    if (!(outcome %in% outcomes)) {
+        stop("invalid outcome")
+    }
+    
+    df <- read.csv("outcomes.csv", colClasses = c(Hospital.30.Day.Death..Mortality..Rates.from.Heart.Attack = "character", 
+        Hospital.30.Day.Death..Mortality..Rates.from.Heart.Failure = "character", 
+        Hospital.30.Day.Death..Mortality..Rates.from.Pneumonia = "character", 
+        Hospital.Name = "character"))
+    
+    # convert ratings to numeric
+    df[, 11] <- suppressWarnings(as.numeric(df[, 11]))
+    df[, 17] <- suppressWarnings(as.numeric(df[, 17]))
+    df[, 23] <- suppressWarnings(as.numeric(df[, 23]))
+    
+    # Create a subset dataframe for given outcome
+    if (outcome == "heart attack") {
+        df1 <- df[, c(2, 7, 11)]
+    } else if (outcome == "heart failure") {
+        df1 <- df[, c(2, 7, 17)]
+    } else if (outcome == "pneumonia") {
+        df1 <- df[, c(2, 7, 23)]
+    }
+    
+    # Rename Column name of Hospital name to Hospital
+    names(df1)[1] <- "hospital"
+    names(df1)[2] <- "state"
+    names(df1)[3] <- "Rate"
+    
+    # Remove rows where Ratings are not known.
+    df1 <- df1[!is.na(df1$Rate), ]
+    # head(df1)
+    
+    library(table)
+    dt <- as.table(df1[, c("hospital", "state", "Rate")])
+    # head(dt) Add ranking to the table dt1 <- dt[,list(hospital, rank =
+    # rank(Rate,ties.method = 'first')), by = state]
+    setkey(dt, state, Rate)
+    dt1 <- dt[, list(hospital, rank = rank(Rate, ties.method = "random")), by = state]
+    # dt1 <- dt[,list(hospital, Rate, rank = rank(Rate,ties.method = 'last')),
+    # by = state]
+    
+    # =======================
+    if (num == "best") {
+        dt2 <- dt1[, list(rank = 1), by = state]
+    } else if (num == "worst") {
+        dt2 <- dt1[, list(rank = max(rank)), by = state]
+    } else {
+        dt2 <- dt1[, list(rank = num), by = state]
+    }
+    # =======================
+    setkey(dt2, state, rank)
+    setkey(dt1, state, rank)
+    return(as.data.frame(dt1[dt2, ][, list(hospital, state, rank)]))
+}
+
+
+```
+
+
+```{r}
+bests("AK", "pneumonia")
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+
+---
